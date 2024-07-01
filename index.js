@@ -4,24 +4,21 @@ const { fs, log, util } = require('vortex-api');
 const winapi = require('winapi-bindings');
 
 const GAME_ID = 'eldenring';
-const GAME_NAME = 'Elden Ring';
-const GAME_EXE = 'eldenring.exe';
 const STEAM_APP_ID = '1245620';
-const TOP_DIR = 'game';
-const EXEC_PATH = path.join(TOP_DIR, GAME_EXE);
+const MODENGINE2_DIR = 'ModEngine-2.1.0.0-win64'; //temporary in the future we should set this path to get the top level directory of the ModEngine2 Loader
 
 function main(context) {
   context.registerGame({
     id: GAME_ID,
-    name: GAME_NAME,
+    name: 'Elden Ring',
     mergeMods: true,
     queryPath: findGame,
     supportedTools: tools,
     queryModPath: () => 'game',
     logo: 'gameart.jpg', //Couldn't find any elden ring png art
-    executable: () => EXEC_PATH,
+    executable: () => 'game/eldenring.exe',
     requiredFiles: [
-      EXEC_PATH,
+      'game/eldenring.exe',
     ],
     setup: prepareForModding,
     environment: {
@@ -29,11 +26,12 @@ function main(context) {
     },
     details: {
       steamAppId: STEAM_APP_ID,
-      stopPatterns: ['(^|/)mods(/|$)'], //Elden Mod Loader pattern because apparently ModEngine2 Content can also contain dll files
+      stopPatterns: ['(^|/)mods(/|$)'], //Elden Mod Loader pattern not to be confused with ModEngine2
     },
   });
 
   //context.registerInstaller('eldenring-modengine2mod', 25, testSupportedModEngine2Content, installModEngine2Content);
+  context.registerInstaller('eldenring-modengine2mod', 25, testSupportedModEngine2LoaderContent, installModEngine2LoaderContent);
 
   return true;
 }
@@ -51,7 +49,7 @@ function testSupportedModEngine2Content(files, gameId) {
 }
 
 function installModEngine2Content(files) {
-  const destination = path.join('mod');
+  const destination = path.join(MODENGINE2_DIR, 'mod');
   const instructions = files.reduce((accum, iter) => {
     if (path.extname(path.basename(iter))) {
       // This is a folder, we need to copy it because each ModEngine2 mods are in separate folder
@@ -64,7 +62,38 @@ function installModEngine2Content(files) {
     accum.push({
       type: 'copy',
       source: iter,
-      destination: fullDest, //Copies to Elden Ring\Game\mod
+      destination: fullDest,
+    });
+
+    return accum;
+  }, []);
+
+  return Promise.resolve({ instructions });
+}
+
+function testSupportedModEngine2LoaderContent(files, gameId) {
+  let supported = (gameId === GAME_ID) &&
+    (files.findIndex(file => file.toLowerCase().includes('modengine2_launcher.exe')) === -1);
+
+  return Promise.resolve({
+    supported,
+    requiredFiles: [],
+  });
+}
+
+function installModEngine2LoaderContent(files) {
+  const instructions = files.reduce((accum, iter) => {
+    if (path.extname(path.basename(iter))) {
+      return accum;
+    }
+
+    const relPath = path.basename(iter);
+    const destination = path.join(discovery.path, relPath);
+
+    accum.push({
+      type: 'copy',
+      source: iter,
+      destination: destination,
     });
 
     return accum;
@@ -88,9 +117,9 @@ let tools = [
     id: 'modengine2',
     name: 'ModEngine 2',
     logo: 'icon/modengine2.png',
-    executable: () => 'launchmod_eldenring.bat',
+    executable: () => path.join(MODENGINE2_DIR, 'launchmod_eldenring.bat'),
     requiredFiles: [
-      'launchmod_eldenring.bat',
+      path.join(MODENGINE2_DIR, 'launchmod_eldenring.bat'),
     ],
     shell: true,
     relative: false, //The tool can be installed anywhere and doesn't need to be on the game directory
@@ -111,7 +140,8 @@ function findGame() {
 }
 
 function prepareForModding(discovery) {
-  return fs.ensureDirWritableAsync(path.join(discovery.path, 'game', 'mods')); //Elden Mod Loader mods directory
+  return fs.ensureDirWritableAsync(path.join(discovery.path, 'game', 'mods')) &&          //Elden Mod Loader mods directory
+    fs.ensureDirWritableAsync(path.join(discovery.path, 'game', MODENGINE2_DIR, 'mod'));  //ModEngine2 mod directory
 }
 
 module.exports = {
