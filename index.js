@@ -6,6 +6,7 @@ const winapi = require('winapi-bindings');
 const GAME_ID = 'eldenring';
 const STEAM_APP_ID = '1245620';
 const MODENGINE2_DIR = 'ModEngine-2.1.0.0-win64'; //temporary in the future we should set this path to get the top level directory of the ModEngine2 Loader
+const MODENGINE2_CONFIG = path.join(MODENGINE2_DIR, 'config_eldenring.toml');
 
 function main(context) {
   context.registerGame({
