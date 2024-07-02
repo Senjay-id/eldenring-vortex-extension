@@ -31,17 +31,16 @@ function main(context) {
     },
   });
 
-  //context.registerInstaller('eldenring-modengine2mod', 25, testSupportedModEngine2Content, installModEngine2Content);
-  context.registerInstaller('eldenring-modengine2mod', 25, testSupportedModEngine2LoaderContent, installModEngine2LoaderContent);
+  context.registerInstaller('eldenring-modengine2mod', 25, testSupportedModEngine2Content, installModEngine2Content);
 
   return true;
 }
 
 function testSupportedModEngine2Content(files, gameId) {
   let supported = (gameId === GAME_ID) &&
-    //bin and dcx file extension are specific to ModEngine2 Content
-    (files.find(file => path.extname(file).toLowerCase() === '.bin') !== undefined) ||
-    (files.find(file => path.extname(file).toLowerCase() === '.dcx') !== undefined);
+    (files.findIndex(file => file.toLowerCase().includes('launchmod_armoredcore6.bat')) === -1) &&
+    ((files.find(file => path.extname(file).toLowerCase() === '.bin') !== undefined) ||
+      (files.find(file => path.extname(file).toLowerCase() === '.dcx') !== undefined));
 
   return Promise.resolve({
     supported,
@@ -49,22 +48,28 @@ function testSupportedModEngine2Content(files, gameId) {
   });
 }
 
+//Haven't really tested this much, needs a review
 function installModEngine2Content(files) {
   const destination = path.join(MODENGINE2_DIR, 'mod');
   const instructions = files.reduce((accum, iter) => {
-    if (path.extname(path.basename(iter))) {
-      // This is a folder, we need to copy it because each ModEngine2 mods are in separate folder
-      return accum;
-    }
+    const isDirectory = iter.endsWith(path.sep) || !path.extname(iter);
 
-    const relPath = path.basename(iter);
+    const relPath = path.relative('', iter);
+
     const fullDest = path.join(destination, relPath);
 
-    accum.push({
-      type: 'copy',
-      source: iter,
-      destination: fullDest,
-    });
+    if (isDirectory) {
+      accum.push({
+        type: 'createDirectory',
+        path: fullDest,
+      });
+    } else {
+      accum.push({
+        type: 'copy',
+        source: iter,
+        destination: fullDest,
+      });
+    }
 
     return accum;
   }, []);
@@ -72,35 +77,16 @@ function installModEngine2Content(files) {
   return Promise.resolve({ instructions });
 }
 
-function testSupportedModEngine2LoaderContent(files, gameId) {
+function testSupportedOverhaulContent(files, gameId) {
   let supported = (gameId === GAME_ID) &&
-    (files.findIndex(file => file.toLowerCase().includes('modengine2_launcher.exe')) === -1);
+    (files.findIndex(file => file.toLowerCase().includes('launchmod_armoredcore6.bat')) === -1) &&
+    (files.findIndex(file => file.toLowerCase().includes('config_eldenring.toml')) !== -1) &&
+    (files.findIndex(file => file.toLowerCase().includes('launchmod_eldenring.bat')) !== -1);
 
   return Promise.resolve({
     supported,
     requiredFiles: [],
   });
-}
-
-function installModEngine2LoaderContent(files) {
-  const instructions = files.reduce((accum, iter) => {
-    if (path.extname(path.basename(iter))) {
-      return accum;
-    }
-
-    const relPath = path.basename(iter);
-    const destination = path.join(discovery.path, relPath);
-
-    accum.push({
-      type: 'copy',
-      source: iter,
-      destination: destination,
-    });
-
-    return accum;
-  }, []);
-
-  return Promise.resolve({ instructions });
 }
 
 let tools = [
@@ -118,9 +104,9 @@ let tools = [
     id: 'modengine2',
     name: 'ModEngine 2',
     logo: 'icon/modengine2.png',
-    executable: () => path.join(MODENGINE2_DIR, 'launchmod_eldenring.bat'),
+    executable: () => path.join(MODENGINE2_DIR, 'launchmod_eldenring.bat'),//dont forget to tweak this
     requiredFiles: [
-      path.join(MODENGINE2_DIR, 'launchmod_eldenring.bat'),
+      path.join(MODENGINE2_DIR, 'launchmod_eldenring.bat'),// this too
     ],
     shell: true,
     relative: false, //The tool can be installed anywhere and doesn't need to be on the game directory
