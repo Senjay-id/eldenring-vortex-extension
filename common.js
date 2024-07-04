@@ -13,4 +13,5 @@ exports.INSTALLING_REQUIREMENTS_NOTIFICATION_ID = 'elden-ring-installing-require
 //#region relative modPaths
 exports.REGULAR_MODS_RELPATH = path.join('game', 'mods');
 exports.MOD_ENGINE_MODS_RELPATH = path.join('game', exports.MODENGINE2_DIR, 'mod');
+exports.GAME_BINARY_RELPATH = 'game';
 //#endregion
