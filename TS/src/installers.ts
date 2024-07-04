@@ -1,5 +1,5 @@
-const path = require('path');
-const { GAME_ID, MODENGINE2_DIR } = require('./common');
+import path from 'path';
+import { GAME_ID, MODENGINE2_DIR } from './common';
 
 //#region ModEngine2
 export function installModEngine2Content(files) {
@@ -31,7 +31,7 @@ export function installModEngine2Content(files) {
 }
 
 export function testSupportedModEngine2Content(files, gameId) {
-  let supported = (gameId === GAME_ID) &&
+  const supported = (gameId === GAME_ID) &&
     (files.findIndex(file => file.toLowerCase().includes('launchmod_armoredcore6.bat')) === -1) &&
     ((files.find(file => path.extname(file).toLowerCase() === '.bin') !== undefined) ||
       (files.find(file => path.extname(file).toLowerCase() === '.dcx') !== undefined));
@@ -45,7 +45,7 @@ export function testSupportedModEngine2Content(files, gameId) {
 
 //#region Overhaul
 export function testSupportedOverhaulContent(files, gameId) {
-  let supported = (gameId === GAME_ID) &&
+  const supported = (gameId === GAME_ID) &&
     (files.findIndex(file => file.toLowerCase().includes('launchmod_armoredcore6.bat')) === -1) &&
     (files.findIndex(file => file.toLowerCase().includes('config_eldenring.toml')) !== -1) &&
     (files.findIndex(file => file.toLowerCase().includes('launchmod_eldenring.bat')) !== -1);
