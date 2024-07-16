@@ -36,6 +36,7 @@
     "webpack-cli": "^4.8.0"
   },
   "dependencies": {
+    "@iarna/toml": "^2.2.5",
     "@types/estree": "^1.0.3",
     "archiver": "^6.0.0",
     "axios": "^1.6.2",

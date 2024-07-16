@@ -16,11 +16,11 @@ export const tools = [
     id: 'modengine2',
     name: 'ModEngine 2',
     logo: 'icon/modengine2.png',
-    executable: () => path.join(MODENGINE2_DIR, MODENGINE2_ELDEN_RING_SCRIPT),//dont forget to tweak this
+    executable: () => path.join(MODENGINE2_ELDEN_RING_SCRIPT),//dont forget to tweak this
     requiredFiles: [
-      path.join(MODENGINE2_DIR, MODENGINE2_ELDEN_RING_SCRIPT),// this too
+      path.join(MODENGINE2_ELDEN_RING_SCRIPT),// this too
     ],
     shell: true,
-    relative: false, //The tool can be installed anywhere and doesn't need to be on the game directory
+    relative: true, //The tool can be installed anywhere and doesn't need to be on the game directory
   }
 ];
