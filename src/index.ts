@@ -4,7 +4,7 @@ import { actions, fs, log, types, selectors, util } from 'vortex-api';
 import { GAME_ID, STEAM_APP_ID, REGULAR_MODS_RELPATH, MOD_LOADERS_MODTYPE, MOD_ENGINE2_MODTYPE,
   MOD_ENGINE_MODS_RELPATH, PLUGIN_REQUIREMENTS,
 } from './common';
-import { installModEngine2Mod, installModLoader, testModLoader, testSupportedModEngine2Content } from './installers';
+import { installModEngine2Mod, installModLoader, installSeamlessCoop, testModLoader, testSeamlessCoop, testSupportedModEngine2Content } from './installers';
 import { tools } from './tools';
 
 import { download } from './downloader';
@@ -55,6 +55,10 @@ function main(context: types.IExtensionContext) {
     name: 'Elden Mod Loaders',
     mergeMods: true,
   });
+
+  context.registerInstaller('eldenring-seamlesscoop-modtype', 15,
+  util.toBlue((files) => testSeamlessCoop(files, GAME_ID)),
+  util.toBlue((files) => installSeamlessCoop(files)));
 
   context.registerInstaller('eldenring-mod-loader', 20,
     util.toBlue(testModLoader),

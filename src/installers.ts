@@ -1,8 +1,9 @@
 /* eslint-disable */
 import path from 'path';
-import { GAME_ID, MOD_ATT_ELDEN_RING_DLLS, MOD_ATT_ELDEN_RING_NAME, MOD_ENGINE2_MODTYPE, MOD_LOADERS_MODTYPE, MODENGINE2_DIR, MODENGINE2_LOAD_ORDER_FILE, MODLOADER_FILE, PLUGIN_REQUIREMENTS } from './common';
+import { GAME_ID, MOD_ATT_ELDEN_RING_DLLS, MOD_ATT_ELDEN_RING_NAME, MOD_ENGINE2_MODTYPE, MOD_LOADERS_MODTYPE, MODENGINE2_DIR, MODENGINE2_LOAD_ORDER_FILE, MODLOADER_FILE, PLUGIN_REQUIREMENTS, SEAMLESS_COOP_MODTYPE } from './common';
 import { selectors, types } from 'vortex-api';
 import { walkPath } from './util';
+import { restackErr } from 'vortex-api/lib/util/util';
 
 //#region ModEngine2
 export async function installModEngine2Mod(api: types.IExtensionApi, files: string[], destinationPath: string) {
@@ -152,6 +153,46 @@ export function installModLoader(files: string[]) {
       });
       return accum;
     }, [modTypeInstr, loFileInstr]);
+    return Promise.resolve({ instructions });
+}
+//#endregion
+
+//#region Seamlesscoop
+export const testSeamlessCoop = (files: string[], gameId: string): Promise<types.ISupportedResult> => {
+  const supported = GAME_ID === gameId && files.some(file => path.basename(file) === 'ersc_launcher.exe');
+  
+  const result: types.ISupportedResult = {
+    supported,
+    requiredFiles: [],
+  };
+  
+  return Promise.resolve(result) as any;
+}
+
+export function installSeamlessCoop(files: string[]) {
+  const modTypeInstr: types.IInstruction = {
+  type: 'setmodtype',
+  value: SEAMLESS_COOP_MODTYPE,
+  };
+  const instructions = files.reduce((accum, iter) => {
+    const isDirectory = iter.endsWith(path.sep) || !path.extname(iter);
+    const relPath = path.relative('', iter);
+    
+    if (isDirectory) {
+    accum.push({
+        type: 'createDirectory',
+        path: relPath,
+    });
+    } else {
+        accum.push({
+            type: 'copy',
+            source: iter,
+            destination: relPath,
+        });
+    }
+    return accum;
+  }, [modTypeInstr]);
+
     return Promise.resolve({ instructions });
 }
 //#endregion

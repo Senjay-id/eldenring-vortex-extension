@@ -41,6 +41,7 @@ export const GAME_BINARY_RELPATH = 'game';
 //#region modTypes
 export const MOD_ENGINE2_MODTYPE = 'eldenring-modengine2-modtype';
 export const MOD_LOADERS_MODTYPE = 'eldenring-eldenmodloaders-modtype';
+export const SEAMLESS_COOP_MODTYPE = 'eldenring-seamlesscoop-modtype';
 //#endregion
 
 //#region 
