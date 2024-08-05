@@ -2,9 +2,14 @@
 import path from 'path'
 import { actions, fs, log, types, selectors, util } from 'vortex-api';
 import { GAME_ID, STEAM_APP_ID, REGULAR_MODS_RELPATH, MOD_LOADERS_MODTYPE, MOD_ENGINE2_MODTYPE,
-  MOD_ENGINE_MODS_RELPATH, PLUGIN_REQUIREMENTS,
+  MOD_ENGINE_MODS_RELPATH, PLUGIN_REQUIREMENTS
 } from './common';
-import { installModEngine2Mod, installModLoader, installSeamlessCoop, testModLoader, testSeamlessCoop, testSupportedModEngine2Content } from './installers';
+
+import { installExecutable, installModEngine2DllMod, installModEngine2Mod, installModLoader,
+  installSeamlessCoop, testModLoader, testSeamlessCoop, testSupportedDllMod,
+  testSupportedExecutable, testSupportedModEngine2Content
+} from './installers';
+
 import { tools } from './tools';
 
 import { download } from './downloader';
@@ -35,6 +40,7 @@ function main(context: types.IExtensionContext) {
   });
 
   const isEldenRing = (gameId) => gameId === GAME_ID;
+
   context.registerModType(MOD_ENGINE2_MODTYPE, 25,
     isEldenRing, () => {
       const discovery = selectors.discoveryByGame(context.api.getState(), GAME_ID);
@@ -57,16 +63,29 @@ function main(context: types.IExtensionContext) {
   });
 
   context.registerInstaller('eldenring-seamlesscoop-modtype', 15,
-  util.toBlue((files) => testSeamlessCoop(files, GAME_ID)),
-  util.toBlue((files) => installSeamlessCoop(files)));
+    util.toBlue(testSeamlessCoop),
+    util.toBlue(installSeamlessCoop));
 
   context.registerInstaller('eldenring-mod-loader', 20,
     util.toBlue(testModLoader),
     util.toBlue(installModLoader) as any);
 
+  // This installer is a funky one - it uses the same mod type as the mod engine 2 mods, and it's being used
+  //  both as an early detection for dll-only mods, and inside the regular eldenring-modengine2mod installer
+  //  to generate dll instructions.
+  context.registerInstaller('eldenring-modengine2dllmod', 22,
+    util.toBlue(testSupportedDllMod),
+    util.toBlue((files, destinationPath) => installModEngine2DllMod(context.api, files, destinationPath)));
+
   context.registerInstaller('eldenring-modengine2mod', 25,
-    util.toBlue((files) => testSupportedModEngine2Content(context.api, files)),
+    util.toBlue((files, gameId) => testSupportedModEngine2Content(context.api, files, gameId)),
     util.toBlue((files, destinationPath) => installModEngine2Mod(context.api, files, destinationPath)));
+
+  // This is a warning installer - it's used to warn the user that the mod contains an executable which will probably have
+  //  externally from Vortex.
+  context.registerInstaller('eldenring-executable-warning', 100,
+    util.toBlue((files, gameId) => testSupportedExecutable(context.api, files, gameId)),
+    util.toBlue((files, destinationPath) => installExecutable(context.api, files, destinationPath)));
 
   context.registerLoadOrder(new EldenRingLoadOrderPage(context.api));
 

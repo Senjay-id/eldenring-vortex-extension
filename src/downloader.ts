@@ -8,6 +8,7 @@ import axios from 'axios';
 
 import { NOTIF_ID_REQUIREMENTS } from './common';
 import { IPluginRequirement, IGitHubAsset, IGitHubRelease } from './types';
+import { deploy } from './util';
 
 
 export async function download(api: types.IExtensionApi, requirements: IPluginRequirement[], force?: boolean) {
@@ -63,8 +64,8 @@ export async function download(api: types.IExtensionApi, requirements: IPluginRe
           await importAndInstall(api, tempPath, req.userFacingName);
         } catch (err) {
           api.showErrorNotification('Failed to download requirements', err, { allowReport: false });
-          return;
         }
+        return;
       }
     }
   } catch (err) {
@@ -83,7 +84,7 @@ async function installDownload(api: types.IExtensionApi, dlId: string, name: str
   const state = api.getState();
   const gameId = selectors.activeGameId(state);
   return new Promise<void>((resolve, reject) => {
-    api.events.emit('start-install-download', dlId, true, (err, modId) => {
+    api.events.emit('start-install-download', dlId, true, async (err, modId) => {
       if (err !== null) {
         api.showErrorNotification('Failed to install requirement', err, { allowReport: false });
         return reject(err);
@@ -96,9 +97,12 @@ async function installDownload(api: types.IExtensionApi, dlId: string, name: str
           installTime: new Date(),
           name,
         }),
-        actions.setModEnabled(profileId, modId, true),
       ];
       util.batchDispatch(api.store, batch);
+      await actions.setModsEnabled(api, profileId, [modId], true, {
+        allowAutoDeploy: true,
+        installed: true,
+      });
       return resolve();
     })
   })
@@ -151,13 +155,7 @@ async function downloadNexus(api: types.IExtensionApi, requirement: IPluginRequi
     const nxmUrl = `nxm://${gameId}/mods/${requirement.modId}/files/${file.file_id}`;
     const dlId = await util.toPromise<string>(cb =>
       api.events.emit('start-download', [nxmUrl], dlInfo, undefined, cb, 'never', { allowInstall: false }));
-    const modId = await util.toPromise<string>(cb =>
-      api.events.emit('start-install-download', dlId, { allowAutoEnable: false }, cb));
-    const profileId = selectors.lastActiveProfileForGame(api.getState(), gameId);
-    await actions.setModsEnabled(api, profileId, [modId], true, {
-      allowAutoDeploy: false,
-      installed: true,
-    });
+    await installDownload(api, dlId, requirement.userFacingName);
   } catch (err) {
     api!.showErrorNotification('Failed to download/install requirement', err);
     util.opn(requirement?.modUrl || requirement.githubUrl).catch(() => null);

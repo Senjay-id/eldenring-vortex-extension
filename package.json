@@ -1,6 +1,6 @@
 {
   "name": "eldenring",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Vortex Extension for Elden Ring",
   "author": "Senjay",
   "private": true,
@@ -11,7 +11,7 @@
     "issueTracker": "https://github.com/Senjay-id/eldenring-vortex-extension/issues"
   },
   "scripts": {
-    "copyassets": "copyfiles -f ./src/assets/* ./dist/",
+    "copyassets": "copyfiles -f ./assets/* ./dist/",
     "build": "npx webpack && yarn copyassets && node createinfojson.js && yarn packplugin && yarn copystyles",
     "buildcopydev": "yarn build && yarn copyplugindev",
     "copystyles": "node copystyles.js",
