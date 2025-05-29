@@ -1,8 +1,9 @@
 /* eslint-disable */
 import path from 'path'
 import { actions, fs, log, types, selectors, util } from 'vortex-api';
-import { GAME_ID, STEAM_APP_ID, REGULAR_MODS_RELPATH, MOD_LOADERS_MODTYPE, MOD_ENGINE2_MODTYPE,
-  MOD_ENGINE_MODS_RELPATH, PLUGIN_REQUIREMENTS
+import {
+  GAME_ID, STEAM_APP_ID, REGULAR_MODS_RELPATH, MOD_LOADERS_MODTYPE, MOD_ENGINE2_MODTYPE,
+  MOD_ENGINE_MODS_RELPATH, PLUGIN_REQUIREMENTS, TOOL_ID_MODENGINE2
 } from './common';
 
 import { installExecutable, installModEngine2DllMod, installModEngine2Mod, installModLoader,
@@ -15,6 +16,7 @@ import { tools } from './tools';
 import { download } from './downloader';
 
 import { EldenRingLoadOrderPage } from './loadorder';
+import { deploy, findModByFile, resetLOFile } from './util';
 
 function main(context: types.IExtensionContext) {
   context.registerGame({
@@ -58,7 +60,7 @@ function main(context: types.IExtensionContext) {
     },
     // The modType is assigned in the installers themselves.
     util.toBlue(() => Promise.resolve(false)), {
-    name: 'Elden Mod Loaders',
+    name: 'Elden Ring Mod Loaders',
     mergeMods: true,
   });
 
@@ -89,7 +91,24 @@ function main(context: types.IExtensionContext) {
 
   context.registerLoadOrder(new EldenRingLoadOrderPage(context.api));
 
+  context.once(() => {
+    context.api.onAsync('did-purge', onDidPurge(context.api));
+  });
+
   return true;
+}
+
+const onDidPurge = (api: types.IExtensionApi) => async () => {
+  const state = api.getState();
+  const gameId = selectors.activeGameId(state);
+  if (gameId !== GAME_ID) {
+    return;
+  }
+  try {
+    await resetLOFile(api);
+  } catch (err) {
+    api.showErrorNotification('Failed to reset load order file', err, { allowReport: false });
+  }
 }
 
 // async function isModEngine2LoaderType(instruction: types.IInstruction[]) {
@@ -115,8 +134,13 @@ async function prepareForModding(api: types.IExtensionApi, discovery: types.IDis
   try {
     await util.GameStoreHelper.launchGameStore(api, discovery.store, undefined, true);
     await Promise.all(modPaths.map((m) => fs.ensureDirWritableAsync(m)));
-    await download(api, PLUGIN_REQUIREMENTS)
-      .then(() => api.store.dispatch(actions.setPrimaryTool(GAME_ID, 'modengine2')));
+    const modEngine = await PLUGIN_REQUIREMENTS[0].findMod(api);
+    if (!modEngine) {
+      await download(api, PLUGIN_REQUIREMENTS);
+      await deploy(api);
+      await api.emitAndAwait('discover-tools', GAME_ID);
+      api.store.dispatch(actions.setPrimaryTool(GAME_ID, TOOL_ID_MODENGINE2));
+    }
     return Promise.resolve();
   } catch (err) {
     log('error', 'Failed to prepare for modding', err);

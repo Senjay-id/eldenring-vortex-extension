@@ -1,9 +1,10 @@
 /* eslint-disable */
-import path from 'path';
-import { selectors, types } from 'vortex-api';
-import { GAME_ID, MOD_ENGINE2_MODTYPE } from './common';
-import { fileExists, getMods, readLOFile, writeLOFile } from './util';
+import { types } from 'vortex-api';
+import { GAME_ID } from './common';
+import { readLOFile, writeLOFile } from './util';
 import { ComponentType } from 'react';
+import { enabledMods, isModEnabled } from './selectors';
+import { IModLookupInfo } from './types';
 
 export class EldenRingLoadOrderPage implements types.ILoadOrderGameInfo {
   private mAPI: types.IExtensionApi;
@@ -29,44 +30,30 @@ export class EldenRingLoadOrderPage implements types.ILoadOrderGameInfo {
   };
 
   public deserializeLoadOrder = async (): Promise<types.LoadOrder> => {
-    const state = this.mAPI.getState();
-    const mods = await getMods(this.mAPI, MOD_ENGINE2_MODTYPE);
-    const current = await readLOFile(this.mAPI);
-    const modPath = selectors.modPathsForGame(state, GAME_ID)[MOD_ENGINE2_MODTYPE];
-    const profileId = selectors.lastActiveProfileForGame(state, GAME_ID);
-    const profile = selectors.profileById(state, profileId)
-    const isEnabled = (mod: types.IMod) => profile.modState?.[mod.id]?.enabled;
-    const available = await mods.reduce(async (accumP, m) => {
-      const accum = await accumP;
-      if (!isEnabled(m)) {
-        return accum;
-      }
-      if (!fileExists(path.join(modPath, 'mod', m.id))) {
-        return accum;
-      }
-      accum.push({ id: m.id, modId: m.id, name: m.id, enabled: true });
-      return accum;
-    }, Promise.resolve([]));
+    const enabled: IModLookupInfo[] = enabledMods(this.mAPI.getState());
     const added = new Set<string>();
-    const newEntries: types.ILoadOrderEntry[] = [].concat(current, available).reduce((accum, iter) => {
-      const exists = available.some(a => a.id === iter.id);
-      const removed = current.some(c => c.id === iter.id) && !exists;
-      if (removed) {
-        return accum;
+    const current = await readLOFile(this.mAPI);
+    const newEntries = enabled.reduce((accum, mod) => {
+      const exists = current.some(c => c.modId === mod.id);
+      const shouldGenerateExtension = mod.eldenGenerateExtension && mod.eldenModName;
+      const hasDlls = Array.isArray(mod.eldenModDlls) && mod.eldenModDlls.length > 0;
+      // It doesn't look like the order of the dll entries matters, so we just add them all
+      //  could add a custom item renderer to show them in a different way in the future.
+      if ((!exists && shouldGenerateExtension) || hasDlls) {
+        accum.push({
+          id: mod.eldenModName,
+          modId: mod.id,
+          name: mod.name,
+          enabled: true,
+        });
+        added.add(mod.id);
       }
-      if (added.has(iter.id)) {
-        return accum;
-      }
-      added.add(iter.id);
-      const mod = mods.find(m => m.id === iter.id);
-      if (!mod) {
-        return accum;
-      }
-      accum.push({ id: mod.id, modId: mod.id, name: mod.id, enabled: true });
       return accum;
     }, []);
-    return Promise.resolve(newEntries);
+    const updatedCurrent = current.filter(c => isModEnabled(this.mAPI.getState(), c.modId));
+    return Promise.resolve([].concat(updatedCurrent, newEntries));
   };
+
   public validate = async (prev: types.LoadOrder, current: types.LoadOrder):  Promise<types.IValidationResult> => {
     return Promise.resolve(undefined);
   };

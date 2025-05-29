@@ -3,8 +3,13 @@ import { fs, log, util, types, selectors } from 'vortex-api';
 import turbowalk, { IEntry, IWalkOptions } from 'turbowalk';
 import path from 'path';
 import semver from 'semver';
-import TOML from '@iarna/toml';
-import { GAME_ID, GAME_NATIVE_DLLS, MOD_ATT_ELDEN_RING_NAME, MOD_ENGINE2_MODTYPE, MOD_LOADERS_MODTYPE, MODENGINE2_LOAD_ORDER_FILE, PLUGIN_REQUIREMENTS } from './common';
+import TOML, { JsonMap } from '@iarna/toml';
+import {
+  GAME_ID, GAME_NATIVE_DLLS, MOD_ATT_ELDEN_RING_DLLS, MOD_ATT_ELDEN_RING_NAME, MOD_ENGINE2_MODTYPE,
+  MOD_LOADERS_MODTYPE, MODENGINE2_LOAD_ORDER_FILE, PLUGIN_REQUIREMENTS
+} from './common';
+import { IModEngine2TOML, IModEngine2TOMLEntry, IModLookupInfo, IPluginRequirement } from './types';
+import { currentGameMods, currentGameModsOfType, enabledMods } from './selectors';
 
 export async function purge(api: types.IExtensionApi): Promise<void> {
   return new Promise((resolve, reject) =>
@@ -41,17 +46,10 @@ export function forceRefresh(api) {
   api?.store?.dispatch(action);
 }
 
-import { IModEngine2TOML, IModEngine2TOMLEntry, IPluginRequirement } from './types';
-
-const modsFilterFunc = (modType?: string) => (mod: types.IMod) => modType !== undefined
-  ? mod.type === modType || mod.type === ''
-  : true;
-export function getMods(api: types.IExtensionApi, modType?: string): types.IMod[] {
-  const state = api.getState();
-  const filterFunc = modsFilterFunc(modType);
-  const gameId = selectors.activeGameId(state);
-  const mods = util.getSafe(state, ['persistent', 'mods', gameId], {});
-  return Object.values(mods).filter(filterFunc) as types.IMod[];
+export function getMods(api: types.IExtensionApi, modType?: string): types.IMod[] {  
+  return modType
+    ? Object.values(currentGameModsOfType(api.getState(), modType))
+    : Object.values(currentGameMods(api.getState()));
 }
 
 export async function findModByFile(api: types.IExtensionApi, modType: string, fileName: string): Promise<types.IMod> {
@@ -147,15 +145,30 @@ export const ensureLOFile = async (api: types.IExtensionApi): Promise<void> => {
     const modEngine2Path = path.join(installationPath, modEngine2Mod.installationPath);
     const files = await walkPath(modEngine2Path);
     const tomlFile = files.find(file => file.filePath.endsWith(MODENGINE2_LOAD_ORDER_FILE + '.bak'));
-    await fs.copyAsync(tomlFile.filePath, expectedLOPath);
+    return fs.copyAsync(tomlFile.filePath, expectedLOPath);
   }
 }
 
 export const resetLOFile = async (api: types.IExtensionApi) => {
   const state = api.getState();
+  const modEngine2Mod = await PLUGIN_REQUIREMENTS[0].findMod(api);
+  if (!modEngine2Mod) {
+    return;
+  }
+  const installationPath = selectors.installPathForGame(state, GAME_ID);
+  const modEngine2Path = path.join(installationPath, modEngine2Mod.installationPath);
+  const backupFile = path.join(modEngine2Path, MODENGINE2_LOAD_ORDER_FILE + '.bak');
   const modPath = selectors.modPathsForGame(state, GAME_ID)[MOD_LOADERS_MODTYPE];
   const expectedLOPath = path.join(modPath, MODENGINE2_LOAD_ORDER_FILE);
-  await fs.removeAsync(expectedLOPath);
+  try {
+    await fs.removeAsync(expectedLOPath);
+    // return fs.copyAsync(backupFile, expectedLOPath);
+  } catch (err) {
+    if (err.code !== 'ENOENT') {
+      return Promise.reject(err);
+    }
+  }
+  return Promise.resolve();
 }
 
 export const readLOFile = async (api: types.IExtensionApi): Promise<types.ILoadOrderEntry[]> => {
@@ -164,29 +177,50 @@ export const readLOFile = async (api: types.IExtensionApi): Promise<types.ILoadO
   const expectedLOPath = path.join(modPath, MODENGINE2_LOAD_ORDER_FILE);
   await ensureLOFile(api);
   const data = await fs.readFileAsync(expectedLOPath);
-  const parsed: any = await TOML.parse.async(data);
-  return Promise.all(parsed.extension.mod_loader.mods.map(entry => TOMLEntryToLOEntry(api, entry)));
+  const parsed: JsonMap = await TOML.parse.async(data);
+  if (!parsed.extension['mod_loader'] || !Array.isArray(parsed.extension['mod_loader'].mods)) {
+    return [];
+  }
+  return Promise.all(parsed.extension['mod_loader'].mods.map(entry => TOMLEntryToLOEntry(api, entry)));
 }
 
 export const writeLOFile = async (api: types.IExtensionApi, entries: types.ILoadOrderEntry[]): Promise<void> => {
   const state = api.getState();
-  await resetLOFile(api);
-  const modPath = path.join(selectors.modPathsForGame(state, GAME_ID)[MOD_ENGINE2_MODTYPE]);
+  const enabled: IModLookupInfo[] = enabledMods(state);
+  const externalDllFiles: { targetPath: string, idx: number }[] = enabled.reduce((accum, entry) => {
+    if (Array.isArray(entry.eldenModDlls) && entry.eldenModDlls.length > 0) {
+      for (const dll of entry.eldenModDlls) {
+        accum.push({
+          targetPath: path.join('mods', dll),
+          idx: entries.findIndex(e => e.modId === entry.id),
+        });
+      }
+    }
+    return accum;
+  }, []);
+  externalDllFiles.sort((a, b) => a.idx - b.idx);
+  const modPath = selectors.modPathsForGame(state, GAME_ID)[MOD_ENGINE2_MODTYPE];
   const expectedLOPath = path.join(modPath, MODENGINE2_LOAD_ORDER_FILE);
   await ensureLOFile(api);
   const data = await fs.readFileAsync(expectedLOPath);
-  const parsed = await TOML.parse.async(data);
-  const fileEntries: IEntry[] = await walkPath(path.join(modPath, 'mods'));
-  const external_dlls = fileEntries.filter(file => file.filePath.endsWith('.dll') && !GAME_NATIVE_DLLS.includes(path.basename(file.filePath).toLowerCase()));
-  const mods = entries.map(entry => ({
-    enabled: entry.enabled,
-    name: entry.name,
-    path: path.join('mod', entry.name),
-  }))
-  parsed.modengine['external_dlls'] = external_dlls;
-  parsed.modengine['debug'] = true;
-  parsed.extension['mod_loader']['mods'] = mods;
-
+  const parsed: JsonMap = await TOML.parse.async(data);
+  const mods = entries.reduce((acc, entry) => {
+    const mod = enabled.find(m => m.id === entry.modId);
+    if (!mod?.eldenGenerateExtension) {
+      return acc;
+    }
+    return acc.concat({
+      enabled: entry.enabled,
+      name: entry.name,
+      path: path.join('mod', mod.eldenModName)
+    });
+  }, []);
+  parsed.modengine['external_dlls'] = externalDllFiles.map(file => file.targetPath);
+  if (mods.length > 0) {
+    parsed.extension['mod_loader'].mods = mods;
+  } else {
+    parsed.extension['mod_loader'].mods = [];
+  }
   const tomlData = TOML.stringify(parsed);
-  await fs.writeFileAsync(expectedLOPath, tomlData);
+  return fs.writeFileAsync(expectedLOPath, tomlData);
 }

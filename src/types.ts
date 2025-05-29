@@ -9,6 +9,26 @@ export interface IGitHubRelease {
   assets: IGitHubAsset[];
 }
 
+export interface IModLookupInfo {
+  id: string;
+  type: string;
+  fileMD5: string;
+  fileSizeBytes: number;
+  fileName: string;
+  installationPath: string;
+  name?: string;
+  logicalFileName?: string;
+  customFileName?: string;
+  version: string;
+  source?: string;
+  modId?: string;
+  fileId?: string;
+  referenceTag?: string;
+  eldenModName?: string;
+  eldenModDlls?: string[];
+  eldenGenerateExtension?: boolean;
+}
+
 export interface IGitHubAsset {
   url: string;
   id: number;

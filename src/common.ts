@@ -21,11 +21,14 @@ export const GAME_NATIVE_DLLS = [
   'steam_api64.dll'
 ];
 
+export const TOOL_ID_SEAMLESS_COOP = 'seamlesscoop';
+export const TOOL_ID_MODENGINE2 = 'modengine2';
 //#endregion
 
 //#region mod attributes
-export const MOD_ATT_ELDEN_RING_NAME = 'eldenModNames';
-export const MOD_ATT_ELDEN_RING_DLLS = 'eldenModDLLs';
+export const MOD_ATT_ELDEN_RING_GENERATE_EXTENSION = 'eldenGenerateExtension';
+export const MOD_ATT_ELDEN_RING_NAME = 'eldenModName';
+export const MOD_ATT_ELDEN_RING_DLLS = 'eldenModDlls';
 //#endregion
 
 //#region NotificationIds

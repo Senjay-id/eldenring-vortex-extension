@@ -8,8 +8,6 @@ import axios from 'axios';
 
 import { NOTIF_ID_REQUIREMENTS } from './common';
 import { IPluginRequirement, IGitHubAsset, IGitHubRelease } from './types';
-import { deploy } from './util';
-
 
 export async function download(api: types.IExtensionApi, requirements: IPluginRequirement[], force?: boolean) {
   const state = api.getState();

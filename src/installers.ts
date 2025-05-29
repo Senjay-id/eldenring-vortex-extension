@@ -1,6 +1,6 @@
 /* eslint-disable */
 import path from 'path';
-import { GAME_ID, MOD_ATT_ELDEN_RING_DLLS, MOD_ATT_ELDEN_RING_NAME, MOD_ENGINE2_MODTYPE, MOD_LOADERS_MODTYPE, MODENGINE2_DIR, MODENGINE2_LOAD_ORDER_FILE, MODLOADER_FILE, PLUGIN_REQUIREMENTS, SEAMLESS_COOP_MODTYPE } from './common';
+import { GAME_ID, MOD_ATT_ELDEN_RING_DLLS, MOD_ATT_ELDEN_RING_GENERATE_EXTENSION, MOD_ATT_ELDEN_RING_NAME, MOD_ENGINE2_MODTYPE, MOD_LOADERS_MODTYPE, MODENGINE2_DIR, MODENGINE2_LOAD_ORDER_FILE, MODLOADER_FILE, PLUGIN_REQUIREMENTS, SEAMLESS_COOP_MODTYPE } from './common';
 import { selectors, types, util } from 'vortex-api';
 import { walkPath } from './util';
 
@@ -46,6 +46,13 @@ export async function installModEngine2Mod(api: types.IExtensionApi, files: stri
       } else {
         fullDest = path.join(destination, iter);
       }
+      if (!accum.some(instr => instr.type === 'attribute' && instr.key === MOD_ATT_ELDEN_RING_GENERATE_EXTENSION)) {
+        accum.push({
+          type: 'attribute',
+          key: MOD_ATT_ELDEN_RING_GENERATE_EXTENSION,
+          value: true,
+        });
+      }
     }
     accum.push({
       type: 'copy',
@@ -70,6 +77,9 @@ export const testSupportedModEngine2Content = (api: types.IExtensionApi, files: 
 //#region dllmods
 
 export async function installModEngine2DllMod(api: types.IExtensionApi, files: string[], destinationPath: string) {
+  if (!files || files.length === 0) {
+    return Promise.resolve({ instructions: [] });
+  }
   const modengine2Mod = await PLUGIN_REQUIREMENTS[0].findMod(api);
   if (!modengine2Mod) {
     const missingInstr: types.IInstruction = {
@@ -118,7 +128,6 @@ export const testSupportedDllMod = (files: string[], gameId: string) => {
 //#region ModEngine2Loader
 export const testModLoader = (files: string[], gameId: string): Promise<types.ISupportedResult> => {
   const modLoaderFiles = [
-    'launchmod_armoredcore6.bat',
     'config_eldenring.toml',
     'launchmod_eldenring.bat',
     MODENGINE2_LOAD_ORDER_FILE,

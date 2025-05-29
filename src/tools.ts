@@ -1,9 +1,9 @@
 import path from 'path';
-import { MODENGINE2_DIR, MODENGINE2_ELDEN_RING_SCRIPT } from './common';
+import { TOOL_ID_SEAMLESS_COOP, TOOL_ID_MODENGINE2, MODENGINE2_ELDEN_RING_SCRIPT } from './common';
 
 export const tools = [
   {
-    id: 'seamlesscoop',
+    id: TOOL_ID_SEAMLESS_COOP,
     name: 'Seamless Co-op',
     logo: 'icon/ersc.png',
     executable: () => 'Game/ersc_launcher.exe',
@@ -13,7 +13,7 @@ export const tools = [
     relative: true,
   },
   {
-    id: 'modengine2',
+    id: TOOL_ID_MODENGINE2,
     name: 'ModEngine 2',
     logo: 'icon/modengine2.png',
     executable: () => path.join(MODENGINE2_ELDEN_RING_SCRIPT),//dont forget to tweak this
