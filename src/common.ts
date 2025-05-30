@@ -4,6 +4,16 @@ import { types } from 'vortex-api';
 import { IPluginRequirement } from './types';
 import { findModByFile, findDownloadIdByFile } from './util';
 
+export const TOP_LEVEL_MOD_FILES = [
+  'eboot.bin', 'eboot.elf', 'regulation.bin', 'sce_discmap.plt', 'sce_discmap_patch.plt',
+];
+export const TOP_LEVEL_MOD_FOLDERS = [
+  'action', 'asset', 'chr', 'cutscene', 'event', 'expression',
+  'facegen', 'font', 'map', 'material', 'menu', 'movie', 'msg',
+  'mtd', 'other', 'param', 'parts', 'sce_sys', 'script', 'sfx',
+  'shader', 'sound', 'sd',
+];
+
 //#region general
 export const GAME_ID = 'eldenring';
 export const STEAM_APP_ID = '1245620';

@@ -17,6 +17,7 @@ import { download } from './downloader';
 
 import { EldenRingLoadOrderPage } from './loadorder';
 import { deploy, findModByFile, resetLOFile } from './util';
+import { currentPrimaryTool } from './selectors';
 
 function main(context: types.IExtensionContext) {
   context.registerGame({
@@ -93,9 +94,27 @@ function main(context: types.IExtensionContext) {
 
   context.once(() => {
     context.api.onAsync('did-purge', onDidPurge(context.api));
+    context.api.onAsync('did-deploy', onDidDeploy(context.api));
   });
 
   return true;
+}
+
+const onDidDeploy = (api: types.IExtensionApi) => async () => {
+  const state = api.getState();
+  const gameId = selectors.activeGameId(state);
+  if (gameId !== GAME_ID) {
+    return;
+  }
+  try {
+    const modEngine = await PLUGIN_REQUIREMENTS[0].findMod(api);
+    if (modEngine && currentPrimaryTool(state) !== TOOL_ID_MODENGINE2) {
+      await api.emitAndAwait('discover-tools', GAME_ID);
+      api.store.dispatch(actions.setPrimaryTool(GAME_ID, TOOL_ID_MODENGINE2));
+    }
+  } catch (err) {
+    api.showErrorNotification('Failed to ensure load order file', err, { allowReport: false });
+  }
 }
 
 const onDidPurge = (api: types.IExtensionApi) => async () => {

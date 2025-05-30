@@ -1,8 +1,14 @@
 /* eslint-disable */
 import path from 'path';
-import { GAME_ID, MOD_ATT_ELDEN_RING_DLLS, MOD_ATT_ELDEN_RING_GENERATE_EXTENSION, MOD_ATT_ELDEN_RING_NAME, MOD_ENGINE2_MODTYPE, MOD_LOADERS_MODTYPE, MODENGINE2_DIR, MODENGINE2_LOAD_ORDER_FILE, MODLOADER_FILE, PLUGIN_REQUIREMENTS, SEAMLESS_COOP_MODTYPE } from './common';
+import {
+  GAME_ID, MOD_ATT_ELDEN_RING_DLLS, MOD_ATT_ELDEN_RING_GENERATE_EXTENSION,
+  MOD_ATT_ELDEN_RING_NAME, MOD_ENGINE2_MODTYPE, MOD_LOADERS_MODTYPE,
+  MODENGINE2_LOAD_ORDER_FILE, MODLOADER_FILE, PLUGIN_REQUIREMENTS, SEAMLESS_COOP_MODTYPE,
+  TOP_LEVEL_MOD_FILES
+} from './common';
 import { selectors, types, util } from 'vortex-api';
 import { walkPath } from './util';
+import { toValidRelPath } from './stopPatterns';
 
 //#region ModEngine2
 export async function installModEngine2Mod(api: types.IExtensionApi, files: string[], destinationPath: string) {
@@ -22,37 +28,26 @@ export async function installModEngine2Mod(api: types.IExtensionApi, files: stri
   const modEngineFiles = await walkPath(path.join(installPath, modengine2Mod.installationPath));
   const filtered = files.filter(f => !!path.extname(path.basename(f)) && !modEngineFiles.map(mef => path.basename(mef.filePath)).includes(path.basename(f)));
   const dlls = filtered.filter(f => ['.dll', '.ini'].includes(path.extname(f)));
+  const otherFiles = filtered.filter(f => !['.dll', '.ini'].includes(path.extname(f)));
   const dllInstructions: types.IInstruction[] = (await installModEngine2DllMod(api, dlls, destinationPath)).instructions;
   const modName: types.IInstruction = {
     type: 'attribute',
     key: MOD_ATT_ELDEN_RING_NAME,
     value: path.basename(destinationPath, '.installing'),
   };
-  const instructions = filtered.reduce((accum, iter) => {
+  const instructions = otherFiles.reduce((accum, iter) => {
     let destination = path.join('mod', modName.value);
     let fullDest;
-    if (path.basename(iter) === 'regulation.bin') {
+    if (TOP_LEVEL_MOD_FILES.includes(path.basename(iter).toLowerCase())) {
       destination = 'mod';
     }
-    if (path.extname(iter) === '.dll' || path.extname(iter) === '.ini') {
-      // We already handled these.
-      return accum;
-    } else {
-      let segments = iter.split(path.sep);
-      const modIdx = segments.map(seg => seg.toLowerCase()).indexOf('mod');
-      if (modIdx !== -1) {
-        segments = segments.slice(modIdx + 1);
-        fullDest = path.join(destination, segments.join(path.sep));
-      } else {
-        fullDest = path.join(destination, iter);
-      }
-      if (!accum.some(instr => instr.type === 'attribute' && instr.key === MOD_ATT_ELDEN_RING_GENERATE_EXTENSION)) {
-        accum.push({
-          type: 'attribute',
-          key: MOD_ATT_ELDEN_RING_GENERATE_EXTENSION,
-          value: true,
-        });
-      }
+    fullDest = path.join(destination, toValidRelPath(iter));
+    if (!accum.some(instr => instr.type === 'attribute' && instr.key === MOD_ATT_ELDEN_RING_GENERATE_EXTENSION)) {
+      accum.push({
+        type: 'attribute',
+        key: MOD_ATT_ELDEN_RING_GENERATE_EXTENSION,
+        value: true,
+      });
     }
     accum.push({
       type: 'copy',

@@ -5,10 +5,10 @@ import path from 'path';
 import semver from 'semver';
 import TOML, { JsonMap } from '@iarna/toml';
 import {
-  GAME_ID, GAME_NATIVE_DLLS, MOD_ATT_ELDEN_RING_DLLS, MOD_ATT_ELDEN_RING_NAME, MOD_ENGINE2_MODTYPE,
+  GAME_ID, MOD_ATT_ELDEN_RING_NAME, MOD_ENGINE2_MODTYPE,
   MOD_LOADERS_MODTYPE, MODENGINE2_LOAD_ORDER_FILE, PLUGIN_REQUIREMENTS
 } from './common';
-import { IModEngine2TOML, IModEngine2TOMLEntry, IModLookupInfo, IPluginRequirement } from './types';
+import { IModEngine2TOMLEntry, IModLookupInfo, IPluginRequirement } from './types';
 import { currentGameMods, currentGameModsOfType, enabledMods } from './selectors';
 
 export async function purge(api: types.IExtensionApi): Promise<void> {

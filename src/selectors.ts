@@ -5,7 +5,16 @@ import { createSelector } from 'reselect';
 import { selectors, types, util } from 'vortex-api';
 
 const allMods = (state: types.IState) => state.persistent.mods;
-const allLoadOrders = (state: types.IState) => state.persistent['loadOrder'];
+const allLoadOrders = (state: types.IState) => state.persistent['loadOrder'] || {};
+const primaryTools = (state: types.IState) => state.settings.interface['primaryTool'] || {};
+
+export const currentPrimaryTool = createSelector([primaryTools, selectors.activeGameId],
+  (tools, gameId) => {
+    if (!gameId || !tools[gameId]) {
+      return null;
+    }
+    return tools[gameId];
+  });
 
 export const currentLoadOrder = createSelector(
   [allLoadOrders, selectors.activeProfile],
@@ -13,7 +22,7 @@ export const currentLoadOrder = createSelector(
     if (!loadOrders || !profile) {
       return [];
     }
-    return loadOrders[profile];
+    return loadOrders[profile.id] || [];
   });
 
 export const currentGameMods = createSelector(allMods, selectors.activeGameId, (inMods, gameId) =>
