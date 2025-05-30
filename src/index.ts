@@ -113,7 +113,7 @@ const onDidDeploy = (api: types.IExtensionApi) => async () => {
       api.store.dispatch(actions.setPrimaryTool(GAME_ID, TOOL_ID_MODENGINE2));
     }
   } catch (err) {
-    api.showErrorNotification('Failed to ensure load order file', err, { allowReport: false });
+    api.showErrorNotification('Failed to set primary tool', err, { allowReport: false });
   }
 }
 
