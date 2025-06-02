@@ -23,7 +23,7 @@ export function InfoPanel() {
       <h4>{t('Additional Information:')}</h4>
       <ul>
         <li>{t('Vortex manipulates ModEngine 2\'s "config_eldenring.toml" when setting the load order.')}</li>
-        <li>{t('Some mods only contain ".dll" files, these are deployed to the "mods" directory and are added to the "external_dlls" array in the configuration file.')}</li>
+        <li>{t('Not all mods require load ordering, if the mod is missing in this page, chances are it\'s a ".dll" mod (which gets added differently)')}</li>
         <li>{t('Asset replacers are placed in the "mod" directory (not "mods") and the config file is modified to include the path to the mod\'s contents.')}</li>
         <li>{t('Press the "Refresh List" button to refresh/sync changes.')}</li>
       </ul>

@@ -67,10 +67,13 @@ export async function findModByFile(api: types.IExtensionApi, modType: string, f
   return undefined;
 }
 
-const getNameAttribute = (mod: types.IMod): string => (Object.keys(mod.attributes || {})).find(key => mod.attributes[key] === MOD_ATT_ELDEN_RING_NAME);
+const getNameAttribute = (mod: types.IMod): string => (Object.keys(mod.attributes || {})).find(key => key === MOD_ATT_ELDEN_RING_NAME);
 export async function findModByLOName(api: types.IExtensionApi, modName: string): Promise<types.IMod> {
   const mods = getMods(api);
-
+  const mod = mods.find(m => m.id === modName);
+  if (mod) {
+    return mod;
+  }
   return mods.find(mod => getNameAttribute(mod) === modName);
 }
 
@@ -181,7 +184,7 @@ export const readLOFile = async (api: types.IExtensionApi): Promise<types.ILoadO
   if (!parsed.extension['mod_loader'] || !Array.isArray(parsed.extension['mod_loader'].mods)) {
     return [];
   }
-  return Promise.all(parsed.extension['mod_loader'].mods.map(entry => TOMLEntryToLOEntry(api, entry)));
+  return Promise.all(parsed.extension['mod_loader'].mods.map(async entry => await TOMLEntryToLOEntry(api, entry)));
 }
 
 export const writeLOFile = async (api: types.IExtensionApi, entries: types.ILoadOrderEntry[]): Promise<void> => {

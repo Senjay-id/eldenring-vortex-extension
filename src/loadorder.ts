@@ -36,16 +36,18 @@ export class EldenRingLoadOrderPage implements types.ILoadOrderGameInfo {
     const enabled: IModLookupInfo[] = enabledMods(this.mAPI.getState());
     const added = new Set<string>();
     const current = await readLOFile(this.mAPI);
+    if (!current) {
+      return [];
+    }
     const newEntries = enabled.reduce((accum, mod) => {
-      const exists = current.some(c => c.modId === mod.id);
+      const exists = current.some(c => c.id === mod.id);
       const shouldGenerateExtension = mod.eldenGenerateExtension && mod.eldenModName;
-      const hasDlls = Array.isArray(mod.eldenModDlls) && mod.eldenModDlls.length > 0;
       // It doesn't look like the order of the dll entries matters, so we just add them all
       //  could add a custom item renderer to show them in a different way in the future.
-      if ((!exists && shouldGenerateExtension) || hasDlls) {
+      if ((!exists && shouldGenerateExtension)) {
         accum.push({
           id: mod.eldenModName,
-          modId: mod.id,
+          modId: mod.id || mod.eldenModName,
           name: mod.name,
           enabled: true,
         });
@@ -53,7 +55,7 @@ export class EldenRingLoadOrderPage implements types.ILoadOrderGameInfo {
       }
       return accum;
     }, []);
-    const updatedCurrent = current.filter(c => isModEnabled(this.mAPI.getState(), c.modId));
+    const updatedCurrent = current.filter(c => isModEnabled(this.mAPI.getState(), c.id) && !added.has(c.id));
     return Promise.resolve([].concat(updatedCurrent, newEntries));
   };
 
