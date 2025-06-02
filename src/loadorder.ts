@@ -6,6 +6,9 @@ import { ComponentType } from 'react';
 import { enabledMods, isModEnabled } from './selectors';
 import { IModLookupInfo } from './types';
 
+import React from 'react';
+import { InfoPanel } from './InfoPanel';
+
 export class EldenRingLoadOrderPage implements types.ILoadOrderGameInfo {
   private mAPI: types.IExtensionApi;
 
@@ -21,7 +24,7 @@ export class EldenRingLoadOrderPage implements types.ILoadOrderGameInfo {
     this.gameId = GAME_ID;
     this.toggleableEntries = false;
     this.clearStateOnPurge = false;
-    this.usageInstructions = 'This is where you can set the load order for Elden Ring mods.';
+    this.usageInstructions = () => React.createElement(InfoPanel);
     this.customItemRenderer = undefined;
     this.noCollectionGeneration = undefined;
   }

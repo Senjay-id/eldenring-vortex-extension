@@ -4,6 +4,8 @@ import { types } from 'vortex-api';
 import { IPluginRequirement } from './types';
 import { findModByFile, findDownloadIdByFile } from './util';
 
+export const NS = 'game-eldenring';
+
 export const TOP_LEVEL_MOD_FILES = [
   'eboot.bin', 'eboot.elf', 'regulation.bin', 'sce_discmap.plt', 'sce_discmap_patch.plt',
 ];
