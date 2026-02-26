@@ -143,28 +143,36 @@ export function installModLoader(files: string[]) {
   };
   const isLOFile = file => path.basename(file) === MODENGINE2_LOAD_ORDER_FILE;
   const loFile = files.find(isLOFile);
-  // save as template
-  const loFileInstr = {
-    type: 'copy',
-    source: loFile,
-    destination: `${path.basename(loFile)}.bak`,
+  
+  const initialInstructions: types.IInstruction[] = [modTypeInstr];
+  
+  // Only add loFileInstr if loFile exists
+  if (loFile) {
+    const loFileInstr: types.IInstruction = {
+      type: 'copy',
+      source: loFile,
+      destination: `${path.basename(loFile)}.bak`,
+    };
+    initialInstructions.push(loFileInstr);
   }
 
   const noDirs = file => path.extname(path.basename(file)) !== '';
   const filter = file => noDirs(file) && !isLOFile(file);
   const filtered = files.filter(filter);
-    const instructions = filtered.reduce((accum, iter) => {
-      const segments = iter.split(path.sep);
-      segments.shift();
-      const destination = segments.join(path.sep);
-      accum.push({
-        type: 'copy',
-        source: iter,
-        destination,
-      });
-      return accum;
-    }, [modTypeInstr, loFileInstr]);
-    return Promise.resolve({ instructions });
+  
+  const instructions = filtered.reduce((accum, iter) => {
+    const segments = iter.split(path.sep);
+    segments.shift();
+    const destination = segments.join(path.sep);
+    accum.push({
+      type: 'copy',
+      source: iter,
+      destination,
+    });
+    return accum;
+  }, initialInstructions);
+  
+  return Promise.resolve({ instructions });
 }
 //#endregion
 
